@@ -1,0 +1,124 @@
+// -------------------
+// Gerador e conexão
+// -------------------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------
+// Enum para controle de acesso (RBAC)
+// -------------------
+enum Role {
+  USER
+  ADMIN
+  INSTITUTION
+}
+
+// -------------------
+// Modelo principal: Usuário
+// -------------------
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  studyProfile UserStudyProfile?
+  preferences  UserPreferences?
+  sessions     UserSession[]
+  interactions QuestionInteraction[]
+}
+
+// -------------------
+// Perfil de estudo do usuário
+// -------------------
+model UserStudyProfile {
+  userId             String   @id
+  preferredStyle     String?
+  studyHabitScore    Float
+  xp                 Int
+  accuracy           Float
+  weakSubjects       String[]
+  strongSubjects     String[]
+  recentTopics       String[]
+  updatedAt          DateTime @updatedAt
+
+  Sessions           UserSession[]
+  Flashcards         Flashcard[]
+  PerformanceMetrics PerformanceMetric[]
++ StudyPlans         StudyPlan[]
+}
+
+// -------------------
+// Preferências de estudo do usuário
+// -------------------
+model UserPreferences {
+  id                   String @id @default(uuid())
+  userId               String @unique
+  preferredStudyMethod String
+  dailyGoal            Int
+  preferredTimeOfDay   String
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// -------------------
+// Sessões de estudo
+// -------------------
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    String
+  startedAt DateTime
+  endedAt   DateTime
+  topics    String[]
+  score     Int
+  mistakes  Int
+  aiSummary String
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// -------------------
+// Interações com questões
+// -------------------
+model QuestionInteraction {
+  id             String   @id @default(uuid())
+  userId         String
+  questionId     String
+  answeredAt     DateTime
+  selectedOption String
+  correct        Boolean
+  timeSpent      Int
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+
+model PdfDocument {
+  id        String     @id @default(uuid())
+  userId    String
+  s3Key     String
+  status    String     @default("PENDING")
+  createdAt DateTime   @default(now())
+  result    PdfResult?
+}
+
+model PdfResult {
+  id            String     @id @default(uuid())
+  documentId    String     @unique
+  extractedText String
+  summary       String
+  mindMapJson   Json
+  questionsJson Json
+  processedAt   DateTime   @default(now())
+  document      PdfDocument @relation(fields: [documentId], references: [id])
+}
